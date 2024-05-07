@@ -3,7 +3,6 @@ package com.tyoma.testingzone.ui
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,55 +32,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.tyoma.testingzone.libs.EZFtpClient
 import com.tyoma.testingzone.libs.EZFtpFile
-import com.tyoma.testingzone.libs.callback.EZFtpTransferSpeedCallback
 import com.tyoma.testingzone.libs.callback.OnEZFtpCallBack
 import com.tyoma.testingzone.model.downloadFile
 import com.tyoma.testingzone.model.uploadFile
-import it.sauronsoftware.ftp4j.FTPException
 import java.io.File
 
 const val SAVE_FILE_PATH = "/storage/emulated/0"
 
-@Composable
-fun FilesList(fList: List<EZFtpFile>, ftpClient: EZFtpClient) {
-    val configuration = LocalConfiguration.current
-    val screenWidth = configuration.screenWidthDp.dp
-    LazyColumn {
-        items(fList) { file ->
-            Card(
-                onClick = { downloadFile(ftpClient, file) }, Modifier.padding(4.dp, 8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(screenWidth - 16.dp, 96.dp)
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = buildString {
-                            val fType = file.type
-                            append(file.remotePath)
-                            appendLine(file.name + " ")
-                            append("Type: " + if (fType == 1) "Folder " else "File ")
-                            if (fType == 0) {
-                                append("= " + file.size.toString() + " Bytes")
-                            }
-                            appendLine(" ")
-                            append("Modified: ")
-                            append(file.modifiedDate.toLocalDate().toString() + " ")
-                            append(file.modifiedDate.toLocalTime())
-                        })
-                    Button(
-                        onClick = { /*TODO*/ }, Modifier.align(Alignment.CenterEnd)
-                    ) {
-                        Text(
-                            text = "Download"
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+
 
 val catURI: Uri = Uri.parse("file:///storage/emulated/0/test.txt")
 
@@ -178,6 +136,72 @@ fun ClientScreen() {
             }) { Text(text = "Disconnect") }
         }
 
-        FilesList(fList = fList, ftpClient = ftpClient)
+        FilesList(filesList = fList, ftpClient = ftpClient)
+    }
+}
+
+@Composable
+fun FilesList(filesList: List<EZFtpFile>, ftpClient: EZFtpClient) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp.dp
+
+    var state by remember { mutableStateOf(emptyList<EZFtpFile>()) }
+    state = filesList
+
+    LazyColumn {
+        items(state) { file ->
+            Card(
+                onClick = {
+                    ftpClient.changeDirectory( file.remotePath + file.name + '/', object : OnEZFtpCallBack<String> {
+                        override fun onSuccess(response: String) {
+                            ftpClient.getCurDirFileList(object : OnEZFtpCallBack<List<EZFtpFile>?> {
+                                override fun onSuccess(response: List<EZFtpFile>?) {
+                                    state = response ?: emptyList()
+                                    Log.d("TAG", "TRANSPORTED $response")
+                                }
+
+                                override fun onFail(code: Int, msg: String) {}
+                            })
+
+
+                        }
+
+                        override fun onFail(code: Int, msg: String?) {
+                            Log.d("TAG", " DIED $code $msg" )
+                        }
+
+                    })
+                }, Modifier.padding(4.dp, 8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(screenWidth - 16.dp, 96.dp)
+                        .padding(8.dp)
+                ) {
+                    Text(
+                        text = buildString {
+                            val fType = file.type
+                            append(file.remotePath)
+                            appendLine(file.name + " ")
+                            append("Type: " + if (fType == 1) "Folder " else "File ")
+                            if (fType == 0) {
+                                append("= " + file.size.toString() + " Bytes")
+                            }
+                            appendLine(" ")
+                            append("Modified: ")
+                            append(file.modifiedDate.toLocalDate().toString() + " ")
+                            append(file.modifiedDate.toLocalTime())
+                        })
+                    Button(
+                        onClick = { downloadFile(ftpClient, file) },
+                        Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        Text(
+                            text = "Get"
+                        )
+                    }
+                }
+            }
+        }
     }
 }
