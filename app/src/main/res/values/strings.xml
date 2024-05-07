@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Testing Zone</string>
+    <string name="title_activity_server_mode_window">ServerModeWindow</string>
+    <string name="title_activity_server">ServerActivity</string>
+</resources>
