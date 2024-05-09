@@ -44,11 +44,11 @@ fun MainComposition() {
                 WelcomeScreen(nControl = nControl)
             }
 
-            composable(route = Screen.SecondScreen.route) { entry ->
+            composable(route = Screen.SecondScreen.route) {
                 ServerScreen()
             }
 
-            composable(route = Screen.ThirdScreen.route) { entry ->
+            composable(route = Screen.ThirdScreen.route) {
                 ClientScreen()
             }
         }
