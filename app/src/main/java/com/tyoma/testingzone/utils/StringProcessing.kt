@@ -1,5 +1,7 @@
 package com.tyoma.testingzone.utils
 
+import com.tyoma.testingzone.libs.main.EZFtpFile
+
 fun transformStringToList(input: String): List<String> {
     val result = mutableListOf<String>()
     var prevIndex = 0
@@ -27,9 +29,33 @@ fun transformListToString(list: List<String>, startIndex: Int): String {
 
 fun transformListToStringForward(list: List<String>, startIndex: Int): String {
     val sb = StringBuilder()
-    for (i in  0..startIndex) {
+    for (i in 0..startIndex) {
         sb.append(list[i])
     }
     return sb.toString()
+}
+
+fun itemInfoBuilder(file: EZFtpFile): String {
+    val info = buildString {
+        val fType = file.type
+        val fNameLen = file.name.length
+        //append(file.remotePath)
+        appendLine(
+            file.name.substring(
+                0..kotlin.math.min(
+                    fNameLen - 1, 12
+                )
+            ) + if (fNameLen > 12) "..." else " "
+        )
+        append("Type: " + if (fType == 1) "Folder " else "File ")
+        if (fType == 0) {
+            append("= " + file.size.toString() + " Bytes")
+        }
+        appendLine(" ")
+        append("Modified: ")
+        append(file.modifiedDate.toLocalDate().toString() + " ")
+        append(file.modifiedDate.toLocalTime())
+    }
+    return info
 }
 

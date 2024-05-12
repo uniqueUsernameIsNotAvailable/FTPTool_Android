@@ -22,7 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.tyoma.testingzone.libs.EZFtpServer
+import com.tyoma.testingzone.libs.main.EZFtpServer
 import com.tyoma.testingzone.libs.user.EZFtpUser
 import com.tyoma.testingzone.libs.user.EZFtpUserPermission
 

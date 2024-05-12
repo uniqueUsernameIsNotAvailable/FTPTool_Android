@@ -1,7 +1,6 @@
 package com.tyoma.testingzone.ui
 
 import android.net.Uri
-import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,16 +30,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.tyoma.testingzone.libs.EZFtpClient
-import com.tyoma.testingzone.libs.EZFtpFile
-import com.tyoma.testingzone.libs.callback.MyFTPCallback
-import com.tyoma.testingzone.model.downloadFile
-import com.tyoma.testingzone.model.uploadFile
-import com.tyoma.testingzone.utils.transformListToString
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.tyoma.testingzone.ClientViewModel
+import com.tyoma.testingzone.utils.itemInfoBuilder
 import com.tyoma.testingzone.utils.transformListToStringForward
 import com.tyoma.testingzone.utils.transformStringToList
 import java.io.File
-import kotlin.math.min
 
 const val SAVE_FILE_PATH = "/storage/emulated/0"
 
@@ -50,21 +45,11 @@ val file = File(catURI.path!!)
 
 @Composable
 @Preview
-fun ClientScreen() {
-    var user by remember { mutableStateOf("") }
-    var pswd by remember { mutableStateOf("") }
-    var addr by remember { mutableStateOf("") }
-    var port by remember { mutableStateOf("") }
-
-    val ftpClient = remember { EZFtpClient() }
-
-    var ftpServerStarted by remember { mutableStateOf(false) }
-    var initialFList by remember { mutableStateOf(emptyList<EZFtpFile>()) }
-
-    val mContext = LocalContext.current
-
+fun ClientScreen(vModel: ClientViewModel = viewModel()) {
     var showDialog by remember { mutableStateOf(false) }
     var showList by remember { mutableStateOf(false) }
+
+    val mContext = LocalContext.current
 
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -77,7 +62,7 @@ fun ClientScreen() {
 
         DescriptionText("Enter connection parameters in the fields below:")
 
-        if (!ftpServerStarted) {
+        if (!vModel.ftpServerStarted.value) {
             Button(onClick = { showDialog = true }) {
                 Text(text = "Connect")
             }
@@ -85,16 +70,15 @@ fun ClientScreen() {
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-                Button(onClick = { uploadFile(ftpClient) }) {
+                Button(onClick = { vModel.uploadFile() }) {
                     Text(text = "Upload File")
                 }
 
                 Button(onClick = {
-                    if (ftpServerStarted) {
-                        ftpClient.disconnect()
-                        initialFList = emptyList()
-                        ftpServerStarted = false
-                        //ftpClient.release()
+                    if (vModel.ftpServerStarted.value) {
+                        vModel.ftpClient.disconnect()
+                        vModel.updateList(emptyList())
+                        vModel.updateServerStatus(false)
                     } else Toast.makeText(
                         mContext, "No FTP Connection is present!", Toast.LENGTH_LONG
                     ).show()
@@ -109,26 +93,26 @@ fun ClientScreen() {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     TextField(
-                        user,
-                        onValueChange = { user = it },
+                        vModel.user.value,
+                        onValueChange = { vModel.updateUser(it) },
                         label = { Text("User") },
                         modifier = Modifier.padding(8.dp)
                     )
                     TextField(
-                        pswd,
-                        onValueChange = { pswd = it },
+                        vModel.password.value,
+                        onValueChange = { vModel.updatePassword(it) },
                         label = { Text("Password") },
                         modifier = Modifier.padding(8.dp)
                     )
                     TextField(
-                        addr,
-                        onValueChange = { addr = it },
+                        vModel.address.value,
+                        onValueChange = { vModel.updateAddress(it) },
                         label = { Text("Path") },
                         modifier = Modifier.padding(8.dp)
                     )
                     TextField(
-                        port,
-                        onValueChange = { port = it },
+                        vModel.port.value,
+                        onValueChange = { vModel.updatePort(it) },
                         label = { Text("Port") },
                         modifier = Modifier.padding(8.dp)
                     )
@@ -136,29 +120,9 @@ fun ClientScreen() {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Button(onClick = {
-                        // ftpClient = EZFtpClient()
-                        ftpClient.connect(
-                            addr,
-                            port.toInt(),
-                            user,
-                            pswd,
-                            object : MyFTPCallback<Void?> {
-                                override fun onSuccess(response: Void?) {
-                                    ftpClient.getCurDirFileList(object :
-                                        MyFTPCallback<List<EZFtpFile>?> {
-                                        override fun onSuccess(response: List<EZFtpFile>?) {
-                                            initialFList = response ?: emptyList()
-                                        }
-
-                                        override fun onFail(code: Int, msg: String) {}
-                                    })
-                                    ftpServerStarted = true
-                                    showDialog = false
-                                    showList = true
-                                }
-
-                                override fun onFail(code: Int, msg: String) {}
-                            })
+                        vModel.connectToFtpServer()
+                        showDialog = false
+                        showList = true
                     }) {
                         Text(text = "Connect")
                     }
@@ -170,31 +134,13 @@ fun ClientScreen() {
             val configuration = LocalConfiguration.current
             val screenWidth = configuration.screenWidthDp.dp
 
-            var state by remember { mutableStateOf(emptyList<EZFtpFile>()) }
-            state = initialFList
-
             var curDir by remember { mutableStateOf(listOf("/")) }
 
             Button(onClick = {
                 val prevDir = transformListToStringForward(curDir, curDir.size - (2 + 1))
                 curDir = transformStringToList(prevDir)
 
-                ftpClient.changeDirectory(prevDir, object : MyFTPCallback<String> {
-                    override fun onSuccess(response: String) {
-                        ftpClient.getCurDirFileList(object : MyFTPCallback<List<EZFtpFile>?> {
-                            override fun onSuccess(response: List<EZFtpFile>?) {
-                                state = response ?: emptyList()
-                                Log.d("TAG", "BROUGHT BACK $response")
-                            }
-
-                            override fun onFail(code: Int, msg: String) {}
-                        })
-                    }
-
-                    override fun onFail(code: Int, msg: String?) {
-                        Log.d("TAG", " DIED $code $msg")
-                    }
-                })
+                vModel.changeDirectory(prevDir)
             }) {
                 Text(
                     text = "Up dir"
@@ -204,29 +150,10 @@ fun ClientScreen() {
             Text(text = transformListToStringForward(curDir, curDir.size - 1))
 
             LazyColumn(Modifier.padding(8.dp)) {
-                items(state) { file ->
+                items(vModel.initialFList.value) { file ->
                     Card(
                         onClick = {
-                            ftpClient.changeDirectory(
-                                file.remotePath + file.name + '/',
-                                object : MyFTPCallback<String> {
-                                    override fun onSuccess(response: String) {
-                                        ftpClient.getCurDirFileList(object :
-                                            MyFTPCallback<List<EZFtpFile>?> {
-                                            override fun onSuccess(response: List<EZFtpFile>?) {
-                                                state = response ?: emptyList()
-
-                                                Log.d("TAG", "TRANSPORTED $response")
-                                            }
-
-                                            override fun onFail(code: Int, msg: String) {}
-                                        })
-                                    }
-
-                                    override fun onFail(code: Int, msg: String?) {
-                                        Log.d("TAG", " DIED $code $msg")
-                                    }
-                                })
+                            vModel.changeDirectory(file.remotePath + file.name + '/')
                             curDir = transformStringToList(file.remotePath + file.name + '/')
                         }, Modifier.padding(4.dp, 8.dp)
                     ) {
@@ -235,28 +162,9 @@ fun ClientScreen() {
                                 .size(screenWidth - 16.dp, 96.dp)
                                 .padding(8.dp)
                         ) {
-                            Text(text = buildString {
-                                val fType = file.type
-                                val fNameLen = file.name.length
-                                //append(file.remotePath)
-                                appendLine(
-                                    file.name.substring(
-                                        0..min(
-                                            fNameLen - 1, 12
-                                        )
-                                    ) + if (fNameLen > 12) "..." else " "
-                                )
-                                append("Type: " + if (fType == 1) "Folder " else "File ")
-                                if (fType == 0) {
-                                    append("= " + file.size.toString() + " Bytes")
-                                }
-                                appendLine(" ")
-                                append("Modified: ")
-                                append(file.modifiedDate.toLocalDate().toString() + " ")
-                                append(file.modifiedDate.toLocalTime())
-                            })
+                            Text(text = itemInfoBuilder(file))
                             Button(
-                                onClick = { downloadFile(ftpClient, file) },
+                                onClick = { vModel.downloadFile(file) },
                                 Modifier.align(Alignment.CenterEnd)
                             ) {
                                 Text(
