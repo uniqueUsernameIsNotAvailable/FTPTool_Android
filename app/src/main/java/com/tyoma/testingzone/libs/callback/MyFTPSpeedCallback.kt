@@ -1,70 +1,70 @@
-package com.tyoma.testingzone.libs.callback;
+package com.tyoma.testingzone.libs.callback
 
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 //callback for speed measurement
-public abstract class MyFTPSpeedCallback implements MyFTPTransferCallback {
+abstract class MyFTPSpeedCallback : MyFTPTransferCallback {
+    private var startTime: Long = 0
+    private var endTime: Long = 0
+    private var totalSize: Long = 0
+    private var tempTotalSize: Long = 0
+    private val executors: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    private var isFinish = false
 
-    private static final long CALC_TIME = 1000;
+    private val calcSpeedTask = Runnable {
+        val totalSize1 = totalSize
+        val transferredSize = totalSize1 - tempTotalSize
+        val speed = transferredSize / 1024.0 / 1000
+        var avgSpeed = 0.00
+        if (isFinish) {
+            val transferredTime = endTime - startTime
+            avgSpeed = totalSize1 / 1024.0 / transferredTime / 1000
+        }
 
-    private long startTime, endTime;
-    private long totalSize, tempTotalSize;
-    private ScheduledExecutorService executors = Executors.newSingleThreadScheduledExecutor();
-    private boolean isFinish = false;
+        onTransferSpeed(isFinish, startTime, endTime, speed, avgSpeed)
+        tempTotalSize = totalSize1
+    }
 
-    private Runnable calcSpeedTask = new Runnable() {
-        @Override
-        public void run() {
-            final long totalSize1 = totalSize;
-            final long transferredSize = totalSize1 - tempTotalSize;
-            final double speed = transferredSize / 1024.0 / 1000;
-            double avgSpeed = 0.00d;
-            if (isFinish) {
-                final long transferredTime = endTime - startTime;
-                avgSpeed = totalSize1 / 1024.0 / transferredTime / 1000;
+    override fun onStateChanged(state: Int) {
+        when (state) {
+            MyFTPTransferCallback.START -> {
+                startTime = System.currentTimeMillis()
+                executors.scheduleWithFixedDelay(
+                    calcSpeedTask,
+                    CALC_TIME,
+                    CALC_TIME,
+                    TimeUnit.MILLISECONDS
+                )
             }
 
-            onTransferSpeed(isFinish, startTime, endTime, speed, avgSpeed);
+            MyFTPTransferCallback.ERROR, MyFTPTransferCallback.COMPLETED, MyFTPTransferCallback.ABORTED -> {
+                isFinish = true
+                endTime = System.currentTimeMillis()
+                executors.shutdown()
+            }
 
-            tempTotalSize = totalSize1;
-        }
-    };
-
-    @Override
-    public void onStateChanged(int state) {
-        switch (state) {
-            case MyFTPTransferCallback.START:
-                startTime = System.currentTimeMillis();
-                executors.scheduleWithFixedDelay(
-                        calcSpeedTask,
-                        CALC_TIME,
-                        CALC_TIME,
-                        TimeUnit.MILLISECONDS);
-                break;
-            case MyFTPTransferCallback.ERROR:
-            case MyFTPTransferCallback.COMPLETED:
-            case MyFTPTransferCallback.ABORTED:
-                isFinish = true;
-                endTime = System.currentTimeMillis();
-                executors.shutdown();
-                break;
-            default:
-                break;
+            else -> {}
         }
     }
 
-    @Override
-    public void onTransferDone(long fileSize, int resultSize) {
-        totalSize += resultSize;
+    override fun onTransferDone(fileSize: Long, resultSize: Int) {
+        totalSize += resultSize.toLong()
     }
 
-    @Override
-    public void onErr(int code, String msg) {
-
+    override fun onErr(code: Int, msg: String) {
     }
 
-    public abstract void onTransferSpeed(boolean isFinished, long startTime, long endTime, double speed, double averageSpeed);
+    abstract fun onTransferSpeed(
+        isFinished: Boolean,
+        startTime: Long,
+        endTime: Long,
+        speed: Double,
+        averageSpeed: Double
+    )
 
+    companion object {
+        private const val CALC_TIME: Long = 1000
+    }
 }
