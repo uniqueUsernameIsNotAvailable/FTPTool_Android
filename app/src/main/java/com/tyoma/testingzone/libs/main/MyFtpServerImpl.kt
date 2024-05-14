@@ -1,90 +1,85 @@
-package com.tyoma.testingzone.libs.main;
+package com.tyoma.testingzone.libs.main
+
+import com.tyoma.testingzone.libs.exceptions.MyFtpNoInitExc
+import com.tyoma.testingzone.libs.user.MyFtpUser
+import org.apache.ftpserver.FtpServer
+import org.apache.ftpserver.FtpServerFactory
+import org.apache.ftpserver.ftplet.Authority
+import org.apache.ftpserver.ftplet.FtpException
+import org.apache.ftpserver.listener.ListenerFactory
+import org.apache.ftpserver.usermanager.impl.BaseUser
 
 
-import com.tyoma.testingzone.libs.exceptions.MyFtpNoInitExc;
-import com.tyoma.testingzone.libs.user.MyFtpUser;
+internal class MyFtpServerImpl(users: List<MyFtpUser>, port: Int) : IMyFtpServer {
+    private val ftpServer: FtpServer?
+    private val lock = Any()
+    private var isInit = false
 
-import org.apache.ftpserver.FtpServer;
-import org.apache.ftpserver.FtpServerFactory;
-import org.apache.ftpserver.ftplet.Authority;
-import org.apache.ftpserver.ftplet.FtpException;
-import org.apache.ftpserver.listener.ListenerFactory;
-import org.apache.ftpserver.usermanager.impl.BaseUser;
 
-import java.util.ArrayList;
-import java.util.List;
-
-final class MyFtpServerImpl implements IMyFtpServer {
-
-    private static final String TAG = "MyFtpServerImpl";
-
-    private FtpServer ftpServer;
-    private final Object lock = new Object();
-    private boolean isInit = false;
-
-    MyFtpServerImpl(List<MyFtpUser> users, int port) {
-        FtpServerFactory serverFactory = new FtpServerFactory();
-        for (MyFtpUser user : users) {
-            BaseUser baseUser = new BaseUser();
-            baseUser.setName(user.getName());
-            baseUser.setPassword(user.getPassword());
-            baseUser.setHomeDirectory(user.getSharedPath());
-            List<Authority> authorities = new ArrayList<>();
-            authorities.add(user.getPermission().getAuthority());
-            baseUser.setAuthorities(authorities);
+    init {
+        val serverFactory = FtpServerFactory()
+        for (user in users) {
+            val baseUser = BaseUser()
+            baseUser.name = user.name
+            baseUser.password = user.password
+            baseUser.homeDirectory = user.sharedPath
+            val authorities: MutableList<Authority> = ArrayList()
+            authorities.add(user.permission.authority)
+            baseUser.authorities = authorities
             try {
-                serverFactory.getUserManager().save(baseUser);
-            } catch (FtpException e) {
-                e.printStackTrace();
+                serverFactory.userManager.save(baseUser)
+            } catch (e: FtpException) {
+                e.printStackTrace()
             }
         }
 
-        ListenerFactory factory = new ListenerFactory();
-        factory.setPort(port);
-        serverFactory.addListener("default", factory.createListener());
-        ftpServer = serverFactory.createServer();
-        isInit = true;
+        val factory = ListenerFactory()
+        factory.port = port
+        serverFactory.addListener("default", factory.createListener())
+        ftpServer = serverFactory.createServer()
+        isInit = true
     }
 
 
-    private void checkInit() {
-        synchronized (lock) {
+    private fun checkInit() {
+        synchronized(lock) {
             if (!isInit) {
-                throw new MyFtpNoInitExc("MyFTP server: no init or released");
+                throw MyFtpNoInitExc("MyFTP server: no init or released")
             }
         }
     }
 
 
-    private void release() {
-        synchronized (lock) {
-            if (ftpServer != null && !ftpServer.isStopped()) {
-                ftpServer.stop();
+    private fun release() {
+        synchronized(lock) {
+            if (ftpServer != null && !ftpServer.isStopped) {
+                ftpServer.stop()
             }
-            isInit = false;
+            isInit = false
         }
     }
 
 
-    @Override
-    public void start() {
-        checkInit();
+    override fun start() {
+        checkInit()
         try {
-            ftpServer.start();
-        } catch (FtpException e) {
-            e.printStackTrace();
+            ftpServer!!.start()
+        } catch (e: FtpException) {
+            e.printStackTrace()
         }
     }
 
 
-    @Override
-    public void stop() {
-        checkInit();
-        ftpServer.stop();
+    override fun stop() {
+        checkInit()
+        ftpServer!!.stop()
     }
 
-    @Override
-    public boolean isStopped() {
-        return ftpServer.isStopped();
+    override fun isStopped(): Boolean {
+        return ftpServer!!.isStopped
+    }
+
+    companion object {
+        private const val TAG = "MyFtpServerImpl"
     }
 }

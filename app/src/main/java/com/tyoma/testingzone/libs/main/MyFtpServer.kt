@@ -1,49 +1,38 @@
-package com.tyoma.testingzone.libs.main;
+package com.tyoma.testingzone.libs.main
 
-import com.tyoma.testingzone.libs.user.MyFtpUser;
+import com.tyoma.testingzone.libs.user.MyFtpUser
 
-import java.util.ArrayList;
-import java.util.List;
+class MyFtpServer private constructor(users: List<MyFtpUser>, port: Int) : IMyFtpServer {
+    private val ftpServerImpl: IMyFtpServer = MyFtpServerImpl(users, port)
 
-public final class MyFtpServer implements IMyFtpServer {
-
-    private IMyFtpServer ftpServerImpl;
-
-    private MyFtpServer(List<MyFtpUser> users, int port) {
-        ftpServerImpl = new MyFtpServerImpl(users, port);
+    override fun start() {
+        ftpServerImpl.start()
     }
 
-    @Override
-    public void start() {
-        ftpServerImpl.start();
+    override fun stop() {
+        ftpServerImpl.stop()
     }
 
-    @Override
-    public void stop() {
-        ftpServerImpl.stop();
+    override fun isStopped(): Boolean {
+        return ftpServerImpl.isStopped
     }
 
-    @Override
-    public boolean isStopped() {
-        return ftpServerImpl.isStopped();
-    }
+    class Builder {
+        private val users: MutableList<MyFtpUser> = ArrayList()
+        private var port = 0
 
-    public static final class Builder {
-        private List<MyFtpUser> users = new ArrayList<>();
-        private int port;
-
-        public Builder addUser(MyFtpUser user) {
-            users.add(user);
-            return this;
+        fun addUser(user: MyFtpUser): Builder {
+            users.add(user)
+            return this
         }
 
-        public Builder setListenPort(int port) {
-            this.port = port;
-            return this;
+        fun setListenPort(port: Int): Builder {
+            this.port = port
+            return this
         }
 
-        public MyFtpServer create() {
-            return new MyFtpServer(users, port);
+        fun create(): MyFtpServer {
+            return MyFtpServer(users, port)
         }
     }
 }

@@ -31,7 +31,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.tyoma.testingzone.ClientViewModel
+import com.tyoma.testingzone.vm.ClientViewModel
 import com.tyoma.testingzone.utils.itemInfoBuilder
 import com.tyoma.testingzone.utils.transformListToStringForward
 import com.tyoma.testingzone.utils.transformStringToList

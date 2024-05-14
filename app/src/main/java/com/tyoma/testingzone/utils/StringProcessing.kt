@@ -1,6 +1,6 @@
 package com.tyoma.testingzone.utils
 
-import com.tyoma.testingzone.libs.main.EZFtpFile
+import com.tyoma.testingzone.libs.main.MyFtpFile
 
 fun transformStringToList(input: String): List<String> {
     val result = mutableListOf<String>()
@@ -35,11 +35,10 @@ fun transformListToStringForward(list: List<String>, startIndex: Int): String {
     return sb.toString()
 }
 
-fun itemInfoBuilder(file: EZFtpFile): String {
+fun itemInfoBuilder(file: MyFtpFile): String {
     val info = buildString {
         val fType = file.type
         val fNameLen = file.name.length
-        //append(file.remotePath)
         appendLine(
             file.name.substring(
                 0..kotlin.math.min(
