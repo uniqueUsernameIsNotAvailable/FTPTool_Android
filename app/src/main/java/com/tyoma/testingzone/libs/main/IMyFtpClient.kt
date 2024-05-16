@@ -1,48 +1,50 @@
-package com.tyoma.testingzone.libs.main;
+package com.tyoma.testingzone.libs.main
 
+import com.tyoma.testingzone.libs.callback.MyFTPCallback
+import com.tyoma.testingzone.libs.callback.MyFTPTransferCallback
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
-import com.tyoma.testingzone.libs.callback.MyFTPCallback;
-import com.tyoma.testingzone.libs.callback.MyFTPTransferCallback;
-
-import java.util.List;
 
 interface IMyFtpClient {
-    void connect(@NonNull String serverIp,
-                 @NonNull int port,
-                 @NonNull String userName,
-                 @NonNull String password);
+    fun connect(
+        serverIp: String,
+        port: Int,
+        userName: String,
+        password: String
+    )
 
-    void connect(@NonNull String serverIp,
-                 @NonNull int port,
-                 @NonNull String userName,
-                 @NonNull String password,
-                 @Nullable MyFTPCallback<Void> callBack);
+    fun connect(
+        serverIp: String,
+        port: Int,
+        userName: String,
+        password: String,
+        callBack: MyFTPCallback<Void>?
+    )
 
-    void disconnect();
+    fun disconnect()
 
-    void disconnect(@Nullable MyFTPCallback<Void> callBack);
+    fun disconnect(callBack: MyFTPCallback<Void>?)
 
+    fun getCurDirFileList(callBack: MyFTPCallback<List<MyFtpFile>>?)
 
-    void getCurDirFileList(@Nullable MyFTPCallback<List<MyFtpFile>> callBack);
+    fun getCurDirPath(callBack: MyFTPCallback<String>?)
 
-    void getCurDirPath(@Nullable MyFTPCallback<String> callBack);
+    fun changeDirectory(path: String, callBack: MyFTPCallback<String>?)
 
-    void changeDirectory(@NonNull String path, @Nullable MyFTPCallback<String> callBack);
+    fun moveUpDir(callBack: MyFTPCallback<String>?)
 
-    void moveUpDir(@Nullable MyFTPCallback<String> callBack);
+    fun downloadFile(
+        remoteFile: MyFtpFile,
+        localFilePath: String,
+        callback: MyFTPTransferCallback?
+    )
 
-    void downloadFile(@NonNull MyFtpFile remoteFile, @NonNull String localFilePath, @Nullable MyFTPTransferCallback callback);
+    fun uploadFile(localFilePath: String, callback: MyFTPTransferCallback?)
 
-    void uploadFile(@NonNull String localFilePath, @Nullable MyFTPTransferCallback callback);
+    fun isConnected(): Boolean
 
-    boolean isConnected();
+    fun isCurDirHome(): Boolean
 
-    boolean isCurDirHome();
+    fun backToHomeDir(callBack: MyFTPCallback<String>)
 
-    void backToHomeDir(MyFTPCallback<String> callBack);
-
-    void release();
+    fun release()
 }

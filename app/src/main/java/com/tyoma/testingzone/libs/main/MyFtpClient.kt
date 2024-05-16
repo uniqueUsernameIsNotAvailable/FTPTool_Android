@@ -1,90 +1,75 @@
-package com.tyoma.testingzone.libs.main;
+package com.tyoma.testingzone.libs.main
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import com.tyoma.testingzone.libs.callback.MyFTPCallback
+import com.tyoma.testingzone.libs.callback.MyFTPTransferCallback
 
-import com.tyoma.testingzone.libs.callback.MyFTPCallback;
-import com.tyoma.testingzone.libs.callback.MyFTPTransferCallback;
+// MyFtpClient.kt
+class MyFtpClient : IMyFtpClient {
+    private val ftpClientImpl: IMyFtpClient = MyFtpClientImpl()
 
-import java.util.List;
-
-public final class MyFtpClient implements IMyFtpClient {
-
-    private static final String TAG = "MyFtpClient";
-
-    private IMyFtpClient ftpClientIml;
-
-    public MyFtpClient() {
-        ftpClientIml = new MyFtpClientImpl();
+    override fun connect(serverIp: String, port: Int, userName: String, password: String) {
+        connect(serverIp, port, userName, password, null)
     }
 
-    @Override
-    public void connect(@NonNull String serverIp, @NonNull int port, @NonNull String userName, @NonNull String password) {
-        connect(serverIp, port, userName, password, null);
+    override fun connect(
+        serverIp: String,
+        port: Int,
+        userName: String,
+        password: String,
+        callBack: MyFTPCallback<Void>?
+    ) {
+        ftpClientImpl.connect(serverIp, port, userName, password, callBack)
     }
 
-    @Override
-    public void connect(@NonNull String serverIp, @NonNull int port, @NonNull String userName, @NonNull String password, @Nullable MyFTPCallback<Void> callBack) {
-        ftpClientIml.connect(serverIp, port, userName, password, callBack);
+    override fun disconnect() {
+        ftpClientImpl.disconnect()
     }
 
-    @Override
-    public void disconnect() {
-        ftpClientIml.disconnect();
+    override fun disconnect(callBack: MyFTPCallback<Void>?) {
+        ftpClientImpl.disconnect(callBack)
     }
 
-    @Override
-    public void disconnect(@Nullable MyFTPCallback<Void> callBack) {
-        ftpClientIml.disconnect(callBack);
+    override fun isConnected(): Boolean {
+        return ftpClientImpl.isConnected()
     }
 
-    @Override
-    public boolean isConnected() {
-        return ftpClientIml.isConnected();
+    override fun getCurDirFileList(callBack: MyFTPCallback<List<MyFtpFile>>?) {
+        ftpClientImpl.getCurDirFileList(callBack)
     }
 
-    @Override
-    public void getCurDirFileList(@Nullable MyFTPCallback<List<MyFtpFile>> callBack) {
-        ftpClientIml.getCurDirFileList(callBack);
+    override fun getCurDirPath(callBack: MyFTPCallback<String>?) {
+        ftpClientImpl.getCurDirPath(callBack)
     }
 
-    @Override
-    public void getCurDirPath(@Nullable MyFTPCallback<String> callBack) {
-        ftpClientIml.getCurDirPath(callBack);
+    override fun changeDirectory(path: String, callBack: MyFTPCallback<String>?) {
+        ftpClientImpl.changeDirectory(path, callBack)
     }
 
-    @Override
-    public void changeDirectory(@NonNull String path, @Nullable MyFTPCallback<String> callBack) {
-        ftpClientIml.changeDirectory(path, callBack);
+    override fun moveUpDir(callBack: MyFTPCallback<String>?) {
+        ftpClientImpl.moveUpDir(callBack)
     }
 
-    @Override
-    public void moveUpDir(@Nullable MyFTPCallback<String> callBack) {
-        ftpClientIml.moveUpDir(callBack);
+    override fun downloadFile(
+        remoteFile: MyFtpFile,
+        localFilePath: String,
+        callback: MyFTPTransferCallback?
+    ) {
+        ftpClientImpl.downloadFile(remoteFile, localFilePath, callback)
     }
 
-    @Override
-    public void downloadFile(@NonNull MyFtpFile remoteFile, @NonNull String localFilePath, @Nullable MyFTPTransferCallback callback) {
-        ftpClientIml.downloadFile(remoteFile, localFilePath, callback);
+    override fun uploadFile(localFilePath: String, callback: MyFTPTransferCallback?) {
+        ftpClientImpl.uploadFile(localFilePath, callback)
     }
 
-    @Override
-    public void uploadFile(@NonNull String localFilePath, @Nullable MyFTPTransferCallback callback) {
-        ftpClientIml.uploadFile(localFilePath, callback);
+    override fun isCurDirHome(): Boolean {
+        return ftpClientImpl != null && ftpClientImpl.isCurDirHome()
     }
 
-    @Override
-    public boolean isCurDirHome() {
-        return ftpClientIml != null && ftpClientIml.isCurDirHome();
+    override fun backToHomeDir(callBack: MyFTPCallback<String>) {
+        ftpClientImpl.backToHomeDir(callBack)
     }
 
-    @Override
-    public void backToHomeDir(MyFTPCallback<String> callBack) {
-        ftpClientIml.backToHomeDir(callBack);
-    }
-
-    @Override
-    public void release() {
-        ftpClientIml.release();
+    override fun release() {
+        ftpClientImpl.release()
     }
 }

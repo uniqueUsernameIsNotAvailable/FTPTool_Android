@@ -1,415 +1,394 @@
-package com.tyoma.testingzone.libs.main;
+package com.tyoma.testingzone.libs.main
 
-import android.os.Handler;
-import android.os.HandlerThread;
-import android.text.TextUtils;
-import android.util.Log;
+import android.os.Handler
+import android.os.HandlerThread
+import android.util.Log
+import com.tyoma.testingzone.libs.callback.MyFTPCallback
+import com.tyoma.testingzone.libs.callback.MyFTPTransferCallback
+import com.tyoma.testingzone.libs.exceptions.MyFtpNoInitExc
+import it.sauronsoftware.ftp4j.FTPAbortedException
+import it.sauronsoftware.ftp4j.FTPClient
+import it.sauronsoftware.ftp4j.FTPDataTransferException
+import it.sauronsoftware.ftp4j.FTPDataTransferListener
+import it.sauronsoftware.ftp4j.FTPException
+import it.sauronsoftware.ftp4j.FTPIllegalReplyException
+import it.sauronsoftware.ftp4j.FTPListParseException
+import java.io.File
+import java.io.IOException
+import java.time.LocalDateTime
+import java.time.ZoneId
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+class MyFtpClientImpl : IMyFtpClient {
+    private val TAG = "MyFtpClientImpl"
+    private val HOME_DIR = "/"
 
-import com.tyoma.testingzone.libs.callback.MyFTPCallback;
-import com.tyoma.testingzone.libs.callback.MyFTPTransferCallback;
-import com.tyoma.testingzone.libs.exceptions.MyFtpNoInitExc;
+    private var ftpClient: FTPClient? = null
+    private val taskThread = HandlerThread("ftp-task")
+    private var taskHandler: Handler? = null
+    private val lock = Any()
+    private var isInit = false
+    private var curDirPath: String? = null
 
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.List;
-
-import it.sauronsoftware.ftp4j.FTPAbortedException;
-import it.sauronsoftware.ftp4j.FTPClient;
-import it.sauronsoftware.ftp4j.FTPDataTransferException;
-import it.sauronsoftware.ftp4j.FTPDataTransferListener;
-import it.sauronsoftware.ftp4j.FTPException;
-import it.sauronsoftware.ftp4j.FTPFile;
-import it.sauronsoftware.ftp4j.FTPIllegalReplyException;
-import it.sauronsoftware.ftp4j.FTPListParseException;
-
-final class MyFtpClientImpl implements IMyFtpClient {
-
-    private static final String TAG = "MyFtpClientImpl";
-    private static final String HOME_DIR = "/";
-
-    private FTPClient ftpClient;
-    private HandlerThread taskThread = new HandlerThread("ftp-task");
-    private Handler taskHandler;
-    private final Object lock = new Object();
-    private boolean isInit = false;
-    private String curDirPath;
-
-    MyFtpClientImpl() {
-        init();
+    init {
+        init()
     }
 
-    private void setCurDirPath(String path) {
-        synchronized (lock) {
-            this.curDirPath = path;
+    private fun setCurDirPath(path: String) {
+        synchronized(lock) {
+            this.curDirPath = path
         }
     }
 
     // init client
-    private void init() {
-        synchronized (lock) {
-            //init work thread
-            final HandlerThread temp = taskThread;
-            if (!temp.isAlive()) {
-                temp.start();
-                taskHandler = new Handler(temp.getLooper());
+    private fun init() {
+        synchronized(lock) {
+            // init work thread
+            val temp = taskThread
+            if (!temp.isAlive) {
+                temp.start()
+                taskHandler = Handler(temp.looper)
             }
-            //create ftp client object
-            ftpClient = new FTPClient();
-            ftpClient.setPassive(true);
-            ftpClient.setType(FTPClient.TYPE_BINARY);
-            isInit = true;
+            // create ftp client object
+            ftpClient = FTPClient()
+            ftpClient?.setPassive(true)
+            ftpClient?.setType(FTPClient.TYPE_BINARY)
+            isInit = true
         }
     }
 
     // release client
-    @Override
-    public void release() {
-        synchronized (lock) {
-            //disconnect if it is currently connected
+    override fun release() {
+        synchronized(lock) {
+            // disconnect if it is currently connected
             if (ftpClient != null && isConnected()) {
-                disconnect();
+                disconnect()
             }
-            //release work thread
-            final HandlerThread temp = taskThread;
-            if (temp.isAlive()) {
-                temp.quit();
+            // release work thread
+            val temp = taskThread
+            if (temp.isAlive) {
+                temp.quit()
             }
-            //clear message queue
-            if (taskHandler != null) {
-                taskHandler.removeCallbacksAndMessages(null);
-            }
-            isInit = false;
+            // clear message queue
+            taskHandler?.removeCallbacksAndMessages(null)
+            isInit = false
         }
     }
 
-    private void checkInit() {
+    private fun checkInit() {
         if (!isInit) {
-            throw new MyFtpNoInitExc("MyFTPClient: not init/released！");
+            throw MyFtpNoInitExc("MyFTPClient: not init/released！")
         }
     }
 
-
-    private @Nullable
-    String getPrevPath() {
-        if (TextUtils.isEmpty(curDirPath)) {
-            return null;
+    private fun getPrevPath(): String? {
+        if (curDirPath.isNullOrEmpty()) {
+            return null
         }
 
-        //if cur path is home dir,return
-        //Because it can't go back to the previous level
-        if (TextUtils.equals(curDirPath, HOME_DIR)) {
-            return HOME_DIR;
+        // if cur path is home dir, return
+        // Because it can't go back to the previous level
+        if (curDirPath == HOME_DIR) {
+            return HOME_DIR
         }
 
-        //get last index
-        final int lastIndex = curDirPath.lastIndexOf("/");
-        if (lastIndex == 0) {
-            return HOME_DIR;
+        // get last index
+        val lastIndex = curDirPath!!.lastIndexOf("/")
+        return if (lastIndex == 0) {
+            HOME_DIR
+        } else {
+            curDirPath!!.substring(0, lastIndex)
         }
-        return curDirPath.substring(0, lastIndex);
-
     }
 
-    @SuppressWarnings("unchecked")
-    private void callbackNormalSuccess(@Nullable final MyFTPCallback callBack, @Nullable final Object response) {
-        MyFtpCallbackWrapper wrapper = new MyFtpCallbackWrapper(callBack);
-        wrapper.onSuccess(response);
+    @Suppress("UNCHECKED_CAST")
+    private fun <E : Any> callbackNormalSuccess(callBack: MyFTPCallback<E>?, response: E?) {
+        val wrapper = MyFtpCallbackWrapper(callBack)
+        wrapper.onSuccess(response)
     }
 
-    @SuppressWarnings("unchecked")
-    private void callbackNormalFail(@Nullable final MyFTPCallback callBack, final int code, final String msg) {
-        MyFtpCallbackWrapper wrapper = new MyFtpCallbackWrapper(callBack);
-        wrapper.onFail(code, msg);
+    @Suppress("UNCHECKED_CAST")
+    private fun callbackNormalFail(callBack: MyFTPCallback<*>?, code: Int, msg: String) {
+        val wrapper = MyFtpCallbackWrapper(callBack)
+        wrapper.onFail(code, msg)
     }
 
-
-    @Override
-    public void connect(@NonNull final String serverIp, @NonNull final int port, @NonNull final String userName, @NonNull final String password) {
-        connect(serverIp, port, userName, password, null);
+    override fun connect(serverIp: String, port: Int, userName: String, password: String) {
+        connect(serverIp, port, userName, password, null)
     }
 
-    @Override
-    public void connect(@NonNull final String serverIp, @NonNull final int port, @NonNull final String userName, @NonNull final String password, @Nullable final MyFTPCallback<Void> callBack) {
-        checkInit();
-        Log.d(TAG, "connect ftp server : serverIp = " + serverIp + ",port = " + port
-                + ",user = " + userName + ",pw = " + password);
-        taskHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ftpClient.connect(serverIp, port);
-                    ftpClient.login(userName, password);
-                    getCurDirPath(null);
-                    callbackNormalSuccess(callBack, null);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException");
-                } catch (FTPIllegalReplyException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_FAIL, "Read server response fail!");
-                } catch (FTPException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (IllegalStateException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                }
-            }
-        });
-    }
-
-    @Override
-    public void disconnect() {
-        disconnect(null);
-    }
-
-    @Override
-    public void disconnect(@Nullable final MyFTPCallback<Void> callBack) {
-        checkInit();
-        taskHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ftpClient.disconnect(true);
-                    callbackNormalSuccess(callBack, null);
-                    release();
-                } catch (IOException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException");
-                } catch (FTPIllegalReplyException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_FAIL, "Read server response fail!");
-                } catch (FTPException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (IllegalStateException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                }
-            }
-        });
-    }
-
-    @Override
-    public boolean isConnected() {
-        return ftpClient != null && ftpClient.isConnected();
-    }
-
-    @Override
-    public void getCurDirFileList(@Nullable final MyFTPCallback<List<MyFtpFile>> callBack) {
-        checkInit();
-        taskHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    FTPFile[] ftpFiles = ftpClient.list();
-                    List<MyFtpFile> myFtpFiles = new ArrayList<>();
-                    for (FTPFile ftpFile : ftpFiles) {
-                        LocalDateTime dt = LocalDateTime.ofInstant(ftpFile.getModifiedDate().toInstant(), ZoneId.systemDefault());
-                        myFtpFiles.add(
-                                new MyFtpFile(
-                                        ftpFile.getName(),
-                                        curDirPath,
-                                        ftpFile.getType(),
-                                        ftpFile.getSize(),
-                                        dt
-                                ));
-                    }
-                    callbackNormalSuccess(callBack, myFtpFiles);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException");
-                } catch (FTPIllegalReplyException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_FAIL, "Read server response fail!");
-                } catch (FTPException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (IllegalStateException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (FTPDataTransferException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (FTPAbortedException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (FTPListParseException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                }
-            }
-        });
-    }
-
-    @Override
-    public void getCurDirPath(@Nullable final MyFTPCallback<String> callBack) {
-        checkInit();
-        taskHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    final String path = ftpClient.currentDirectory();
-                    setCurDirPath(path);
-                    callbackNormalSuccess(callBack, path);
-                } catch (IOException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException");
-                } catch (FTPIllegalReplyException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_FAIL, "Read server response fail!");
-                } catch (FTPException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (IllegalStateException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                }
-            }
-        });
-    }
-
-    @Override
-    public void changeDirectory(@Nullable final String path, @Nullable final MyFTPCallback<String> callBack) {
-        checkInit();
-        taskHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    if (TextUtils.isEmpty(path)) {
-                        callbackNormalFail(callBack, MyFtpResultCode.RESULT_FAIL, "path is empty!");
-                    } else {
-                        ftpClient.changeDirectory(path);
-                        setCurDirPath(path);
-                        callbackNormalSuccess(callBack, path);
-                    }
-                } catch (IOException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException");
-                } catch (FTPIllegalReplyException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_FAIL, "Read server response fail!");
-                } catch (FTPException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (IllegalStateException e) {
-                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                }
-            }
-        });
-    }
-
-    @Override
-    public void moveUpDir(@Nullable final MyFTPCallback<String> callBack) {
-        changeDirectory(getPrevPath(), callBack);
-    }
-
-    @Override
-    public void backToHomeDir(MyFTPCallback<String> callBack) {
-        changeDirectory(HOME_DIR, callBack);
-    }
-
-    @Override
-    public void downloadFile(@NonNull final MyFtpFile remoteFile, @NonNull String localFilePath, @Nullable MyFTPTransferCallback callback) {
-        checkInit();
-
-        final File localFile = new File(localFilePath);
-        final MyFtpTransferCallbackWrapper callbackWrapper
-                = new MyFtpTransferCallbackWrapper(callback);
-
-        taskHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    ftpClient.download(remoteFile.getName(), localFile, new FTPDataTransferListener() {
-                        @Override
-                        public void started() {
-                            callbackWrapper.onStateChanged(MyFTPTransferCallback.START);
-                        }
-
-                        @Override
-                        public void transferred(int i) {
-                            callbackWrapper.onTransferDone(remoteFile.getSize(), i);
-                        }
-
-                        @Override
-                        public void completed() {
-                            callbackWrapper.onStateChanged(MyFTPTransferCallback.COMPLETED);
-                        }
-
-                        @Override
-                        public void aborted() {
-                            callbackWrapper.onStateChanged(MyFTPTransferCallback.ABORTED);
-                        }
-
-                        @Override
-                        public void failed() {
-                            callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                            callbackWrapper.onErr(MyFtpResultCode.RESULT_FAIL, "Download file fail!");
-                        }
-                    });
-                } catch (IOException e) {
-                    callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                    callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, "IOException");
-                } catch (FTPIllegalReplyException e) {
-                    callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                    callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, "Read server response fail!");
-                } catch (FTPException e) {
-                    callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                    callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (FTPDataTransferException e) {
-                    callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                    callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-                } catch (FTPAbortedException e) {
-                    callbackWrapper.onStateChanged(MyFTPTransferCallback.ABORTED);
-                }
-            }
-        });
-    }
-
-    @Override
-    public void uploadFile(@NonNull final String localFilePath, @Nullable MyFTPTransferCallback callback) {
-        checkInit();
-
-        final File localFile = new File(localFilePath);
-        final MyFtpTransferCallbackWrapper callbackWrapper
-                = new MyFtpTransferCallbackWrapper(callback);
-
-        taskHandler.post(() -> {
+    override fun connect(
+        serverIp: String,
+        port: Int,
+        userName: String,
+        password: String,
+        callBack: MyFTPCallback<Void>?
+    ) {
+        checkInit()
+        Log.d(
+            TAG,
+            "connect ftp server : serverIp = $serverIp,port = $port,user = $userName,pw = $password"
+        )
+        taskHandler?.post {
             try {
-                ftpClient.upload(localFile, new FTPDataTransferListener() {
-                    @Override
-                    public void started() {
-                        callbackWrapper.onStateChanged(MyFTPTransferCallback.START);
-                    }
-
-                    @Override
-                    public void transferred(int i) {
-                        callbackWrapper.onTransferDone(localFile.length(), i);
-                    }
-
-                    @Override
-                    public void completed() {
-                        callbackWrapper.onStateChanged(MyFTPTransferCallback.COMPLETED);
-                    }
-
-                    @Override
-                    public void aborted() {
-                        callbackWrapper.onStateChanged(MyFTPTransferCallback.ABORTED);
-                    }
-
-                    @Override
-                    public void failed() {
-                        callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                        callbackWrapper.onErr(MyFtpResultCode.RESULT_FAIL, "Download file fail!");
-                    }
-                });
-            } catch (IOException e) {
-                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, "IOException");
-            } catch (FTPIllegalReplyException e) {
-                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, "Read server response fail!");
-            } catch (FTPException e) {
-                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-            } catch (FTPDataTransferException e) {
-                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR);
-                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, e.getMessage());
-            } catch (FTPAbortedException e) {
-                callbackWrapper.onStateChanged(MyFTPTransferCallback.ABORTED);
+                ftpClient?.connect(serverIp, port)
+                ftpClient?.login(userName, password)
+                getCurDirPath(null)
+                callbackNormalSuccess(callBack, null)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException")
+            } catch (e: FTPIllegalReplyException) {
+                callbackNormalFail(
+                    callBack,
+                    MyFtpResultCode.RESULT_FAIL,
+                    "Read server response fail!"
+                )
+            } catch (e: FTPException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: IllegalStateException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
             }
-        });
+        }
     }
 
-    @Override
-    public boolean isCurDirHome() {
-        return TextUtils.equals(curDirPath, HOME_DIR);
+    override fun disconnect() {
+        disconnect(null)
+    }
+
+    override fun disconnect(callBack: MyFTPCallback<Void>?) {
+        checkInit()
+        taskHandler?.post {
+            try {
+                ftpClient?.disconnect(true)
+                callbackNormalSuccess(callBack, null)
+                release()
+            } catch (e: IOException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException")
+            } catch (e: FTPIllegalReplyException) {
+                callbackNormalFail(
+                    callBack,
+                    MyFtpResultCode.RESULT_FAIL,
+                    "Read server response fail!"
+                )
+            } catch (e: FTPException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: IllegalStateException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            }
+        }
+    }
+
+    override fun isConnected(): Boolean {
+        return ftpClient != null && ftpClient?.isConnected == true
+    }
+
+    override fun getCurDirFileList(callBack: MyFTPCallback<List<MyFtpFile>>?) {
+        checkInit()
+        taskHandler?.post {
+            try {
+                val ftpFiles = ftpClient?.list()
+                val myFtpFiles = ftpFiles?.map { ftpFile ->
+                    val dt = LocalDateTime.ofInstant(
+                        ftpFile.modifiedDate.toInstant(),
+                        ZoneId.systemDefault()
+                    )
+                    MyFtpFile(
+                        ftpFile.name,
+                        curDirPath,
+                        ftpFile.type,
+                        ftpFile.size,
+                        dt
+                    )
+                }?.toList() ?: emptyList()
+                callbackNormalSuccess(callBack, myFtpFiles)
+            } catch (e: IOException) {
+                e.printStackTrace()
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException")
+            } catch (e: FTPIllegalReplyException) {
+                callbackNormalFail(
+                    callBack,
+                    MyFtpResultCode.RESULT_FAIL,
+                    "Read server response fail!"
+                )
+            } catch (e: FTPException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: IllegalStateException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: FTPDataTransferException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: FTPAbortedException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: FTPListParseException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            }
+        }
+    }
+
+    override fun getCurDirPath(callBack: MyFTPCallback<String>?) {
+        checkInit()
+        taskHandler?.post {
+            try {
+                val path = ftpClient?.currentDirectory()
+                setCurDirPath(path!!)
+                callbackNormalSuccess(callBack, path)
+            } catch (e: IOException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException")
+            } catch (e: FTPIllegalReplyException) {
+                callbackNormalFail(
+                    callBack,
+                    MyFtpResultCode.RESULT_FAIL,
+                    "Read server response fail!"
+                )
+            } catch (e: FTPException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: IllegalStateException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            }
+        }
+    }
+
+    override fun changeDirectory(path: String, callBack: MyFTPCallback<String>?) {
+        checkInit()
+        taskHandler?.post {
+            try {
+                if (path.isEmpty()) {
+                    callbackNormalFail(callBack, MyFtpResultCode.RESULT_FAIL, "path is empty!")
+                } else {
+                    ftpClient?.changeDirectory(path)
+                    setCurDirPath(path)
+                    callbackNormalSuccess(callBack, path)
+                }
+            } catch (e: IOException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, "IOException")
+            } catch (e: FTPIllegalReplyException) {
+                callbackNormalFail(
+                    callBack,
+                    MyFtpResultCode.RESULT_FAIL,
+                    "Read server response fail!"
+                )
+            } catch (e: FTPException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: IllegalStateException) {
+                callbackNormalFail(callBack, MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            }
+        }
+    }
+
+    override fun moveUpDir(callBack: MyFTPCallback<String>?) {
+        changeDirectory(getPrevPath()!!, callBack)
+    }
+
+    override fun backToHomeDir(callBack: MyFTPCallback<String>) {
+        changeDirectory(HOME_DIR, callBack)
+    }
+
+    override fun downloadFile(
+        remoteFile: MyFtpFile,
+        localFilePath: String,
+        callback: MyFTPTransferCallback?
+    ) {
+        checkInit()
+
+        val localFile = File(localFilePath)
+        val callbackWrapper = MyFtpTransferCallbackWrapper(callback)
+
+        taskHandler?.post {
+            try {
+                ftpClient?.download(remoteFile.name, localFile, object : FTPDataTransferListener {
+                    override fun started() {
+                        callbackWrapper.onStateChanged(MyFTPTransferCallback.START)
+                    }
+
+                    override fun transferred(i: Int) {
+                        callbackWrapper.onTransferDone(remoteFile.size, i)
+                    }
+
+                    override fun completed() {
+                        callbackWrapper.onStateChanged(MyFTPTransferCallback.COMPLETED)
+                    }
+
+                    override fun aborted() {
+                        callbackWrapper.onStateChanged(MyFTPTransferCallback.ABORTED)
+                    }
+
+                    override fun failed() {
+                        callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                        callbackWrapper.onErr(MyFtpResultCode.RESULT_FAIL, "Download file fail!")
+                    }
+                })
+            } catch (e: IOException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, "IOException")
+            } catch (e: FTPIllegalReplyException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                callbackWrapper.onErr(
+                    MyFtpResultCode.RESULT_EXCEPTION,
+                    "Read server response fail!"
+                )
+            } catch (e: FTPException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: FTPDataTransferException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: FTPAbortedException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ABORTED)
+            }
+        }
+    }
+
+    override fun uploadFile(localFilePath: String, callback: MyFTPTransferCallback?) {
+        checkInit()
+
+        val localFile = File(localFilePath)
+        val callbackWrapper = MyFtpTransferCallbackWrapper(callback)
+
+        taskHandler?.post {
+            try {
+                ftpClient?.upload(localFile, object : FTPDataTransferListener {
+                    override fun started() {
+                        callbackWrapper.onStateChanged(MyFTPTransferCallback.START)
+                    }
+
+                    override fun transferred(i: Int) {
+                        callbackWrapper.onTransferDone(localFile.length(), i)
+                    }
+
+                    override fun completed() {
+                        callbackWrapper.onStateChanged(MyFTPTransferCallback.COMPLETED)
+                    }
+
+                    override fun aborted() {
+                        callbackWrapper.onStateChanged(MyFTPTransferCallback.ABORTED)
+                    }
+
+                    override fun failed() {
+                        callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                        callbackWrapper.onErr(MyFtpResultCode.RESULT_FAIL, "Download file fail!")
+                    }
+                })
+            } catch (e: IOException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, "IOException")
+            } catch (e: FTPIllegalReplyException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                callbackWrapper.onErr(
+                    MyFtpResultCode.RESULT_EXCEPTION,
+                    "Read server response fail!"
+                )
+            } catch (e: FTPException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: FTPDataTransferException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ERROR)
+                callbackWrapper.onErr(MyFtpResultCode.RESULT_EXCEPTION, e.message!!)
+            } catch (e: FTPAbortedException) {
+                callbackWrapper.onStateChanged(MyFTPTransferCallback.ABORTED)
+            }
+        }
+    }
+
+    override fun isCurDirHome(): Boolean {
+        return curDirPath == HOME_DIR
     }
 }
