@@ -52,8 +52,8 @@ fun itemInfoBuilder(file: MyFtpFile): String {
         }
         appendLine(" ")
         append("Modified: ")
-        append(file.modifiedDate.toLocalDate().toString() + " ")
-        append(file.modifiedDate.toLocalTime())
+        append(file.modifiedDate?.toLocalDate().toString() + " ")
+        append(file.modifiedDate?.toLocalTime() ?: 0 )
     }
     return info
 }

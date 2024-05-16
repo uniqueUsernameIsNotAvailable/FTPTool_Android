@@ -27,7 +27,7 @@ class MyFtpClientImpl : IMyFtpClient {
     private var taskHandler: Handler? = null
     private val lock = Any()
     private var isInit = false
-    private var curDirPath: String? = null
+    private var curDirPath: String = HOME_DIR
 
     init {
         init()

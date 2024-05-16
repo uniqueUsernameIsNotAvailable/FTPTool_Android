@@ -14,7 +14,7 @@ class MyFtpServer private constructor(users: List<MyFtpUser>, port: Int) : IMyFt
     }
 
     override fun isStopped(): Boolean {
-        return ftpServerImpl.isStopped
+        return ftpServerImpl.isStopped()
     }
 
     class Builder {
