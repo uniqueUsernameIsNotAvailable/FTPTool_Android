@@ -5,7 +5,7 @@ import android.os.Looper
 import com.tyoma.testingzone.libs.callback.MyFTPCallback
 
 // MyFtpCallbackWrapper.kt
-class MyFtpCallbackWrapper<E : Any>(private val onMyFtpCallBack: MyFTPCallback<E>?) {
+class MyFtpCallbackWrapper<E : Any?>(private val onMyFtpCallBack: MyFTPCallback<E>?) {
     private val lock = Any()
     private val handler = Handler(Looper.getMainLooper())
 

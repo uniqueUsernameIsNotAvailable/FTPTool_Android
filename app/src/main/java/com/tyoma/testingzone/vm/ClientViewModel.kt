@@ -72,7 +72,6 @@ class ClientViewModel : ViewModel() {
             }
         })
     }
-
     fun connectToFtpServer() {
         ftpClient.connect(
             address.value,
@@ -94,11 +93,11 @@ class ClientViewModel : ViewModel() {
 
     fun changeDirectory(newDirectory: String) {
         ftpClient.changeDirectory(newDirectory, object : MyFTPCallback<String> {
-            override fun onSuccess(response: String) {
+            override fun onSuccess(response: String?) {
                 fetchCurrentDirectoryFileList()
             }
 
-            override fun onFail(code: Int, msg: String?) {}
+            override fun onFail(code: Int, msg: String) {}
         })
     }
 

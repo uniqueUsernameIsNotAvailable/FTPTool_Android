@@ -1,16 +1,18 @@
-package com.tyoma.testingzone.libs.callback;
+package com.tyoma.testingzone.libs.callback
 
 // callback of data transfer
-public interface MyFTPTransferCallback {
-    int START = 1;
-    int TRANSFER = 2;
-    int COMPLETED = 3;
-    int ERROR = 4;
-    int ABORTED = 5;
+interface MyFTPTransferCallback {
+    fun onStateChanged(state: Int)
 
-    void onStateChanged(int state);
+    fun onTransferDone(fileSize: Long, resultSize: Int)
 
-    void onTransferDone(long fileSize, int resultSize);
+    fun onErr(code: Int, msg: String)
 
-    void onErr(int code, String msg);
+    companion object {
+        const val START: Int = 1
+        const val TRANSFER: Int = 2
+        const val COMPLETED: Int = 3
+        const val ERROR: Int = 4
+        const val ABORTED: Int = 5
+    }
 }

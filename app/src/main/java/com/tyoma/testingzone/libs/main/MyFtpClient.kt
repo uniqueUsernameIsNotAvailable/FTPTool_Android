@@ -62,7 +62,7 @@ class MyFtpClient : IMyFtpClient {
     }
 
     override fun isCurDirHome(): Boolean {
-        return ftpClientImpl != null && ftpClientImpl.isCurDirHome()
+        return ftpClientImpl.isCurDirHome()
     }
 
     override fun backToHomeDir(callBack: MyFTPCallback<String>) {
