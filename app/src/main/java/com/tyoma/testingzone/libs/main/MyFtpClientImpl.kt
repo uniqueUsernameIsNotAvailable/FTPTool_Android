@@ -92,11 +92,11 @@ class MyFtpClientImpl : IMyFtpClient {
         }
 
         // get last index
-        val lastIndex = curDirPath!!.lastIndexOf("/")
+        val lastIndex = curDirPath.lastIndexOf("/")
         return if (lastIndex == 0) {
             HOME_DIR
         } else {
-            curDirPath!!.substring(0, lastIndex)
+            curDirPath.substring(0, lastIndex)
         }
     }
 

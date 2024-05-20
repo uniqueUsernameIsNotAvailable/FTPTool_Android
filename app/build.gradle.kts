@@ -1,5 +1,3 @@
-import com.android.build.api.dsl.Packaging
-
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
@@ -81,8 +79,15 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    // For Activity Result APIs
+    implementation (libs.androidx.activity.ktx)
+
+    // For ContentResolver
+    implementation (libs.androidx.core.ktx.v190)
+
+
     implementation(libs.androidx.lifecycle.viewmodel.compose)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 

@@ -16,15 +16,18 @@ class ServerViewModel : ViewModel() {
     private val _password = mutableStateOf("")
     val password: State<String> = _password
 
-    private val _address = mutableStateOf("")
+    private val _address = mutableStateOf("/storage/emulated/0/")
     val address: State<String> = _address
 
     private val _port = mutableStateOf("")
     val port: State<String> = _port
 
+    private val _sStatus = mutableStateOf(false)
+    val isServerUp: State<Boolean> = _sStatus
+
     private var ftpUser: MyFtpUser? = null
     private var ftpServer: MyFtpServer? = null
-    var ftpServerStarted = false
+    //var ftpServerStarted = false
 
     fun onUserChanged(newUser: String) {
         _user.value = newUser
@@ -42,8 +45,12 @@ class ServerViewModel : ViewModel() {
         _port.value = newPort
     }
 
+    fun onServerStatusChanged(newStatus: Boolean) {
+        _sStatus.value = newStatus
+    }
+
     fun startFtpServer() {
-        if (!ftpServerStarted) {
+        if (!isServerUp.value) {
             ftpUser = MyFtpUser(
                 user.value,
                 password.value,
@@ -55,14 +62,14 @@ class ServerViewModel : ViewModel() {
                 .setListenPort(port.value.toIntOrNull() ?: 1234)
                 .create()
             ftpServer?.start()
-            ftpServerStarted = true
+            onServerStatusChanged(true)
         }
     }
 
     fun stopFtpServer() {
-        if (ftpServerStarted) {
+        if (isServerUp.value) {
             ftpServer?.stop()
-            ftpServerStarted = false
+            onServerStatusChanged(false)
         }
     }
 }

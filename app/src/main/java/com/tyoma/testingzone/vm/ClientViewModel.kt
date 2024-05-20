@@ -4,12 +4,11 @@ import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.tyoma.testingzone.libs.main.MyFtpFile
-import com.tyoma.testingzone.libs.callback.MyFTPSpeedCallback
 import com.tyoma.testingzone.libs.callback.MyFTPCallback
+import com.tyoma.testingzone.libs.callback.MyFTPSpeedCallback
 import com.tyoma.testingzone.libs.main.MyFtpClient
+import com.tyoma.testingzone.libs.main.MyFtpFile
 import com.tyoma.testingzone.ui.SAVE_FILE_PATH
-import com.tyoma.testingzone.ui.file
 import it.sauronsoftware.ftp4j.FTPException
 
 
@@ -30,11 +29,17 @@ class ClientViewModel : ViewModel() {
     private val _ftpClient = MyFtpClient()
     val ftpClient: MyFtpClient = _ftpClient
 
-    private val _ftpServerStarted = mutableStateOf(false)
-    val ftpServerStarted: State<Boolean> = _ftpServerStarted
+    private val _ftpClientConnect = mutableStateOf(false)
+    val ftpClientConnect: State<Boolean> = _ftpClientConnect
 
     private val _initialFList = mutableStateOf(emptyList<MyFtpFile>())
     val initialFList: State<List<MyFtpFile>> = _initialFList
+
+    private val _showDialog = mutableStateOf(false)
+    val showDialog: State<Boolean> = _showDialog
+
+    private val _showList = mutableStateOf(false)
+    val showList: State<Boolean> = _showList
 
     // Functions for updating state
     fun updateUser(newUser: String) {
@@ -57,9 +62,19 @@ class ClientViewModel : ViewModel() {
         _initialFList.value = newList
     }
 
-    fun updateServerStatus(newStatus: Boolean) {
-        _ftpServerStarted.value = newStatus
+    fun updateClientStatus(newStatus: Boolean) {
+        _ftpClientConnect.value = newStatus
     }
+    fun updateShowDialog(newStatus: Boolean) {
+        _showDialog.value = newStatus
+    }
+    fun updateShowList(newStatus: Boolean) {
+        _showList.value = newStatus
+    }
+
+//    fun setFileUri(uri: Uri?) {
+//        _fileUri.value = uri
+//    }
 
     private fun fetchInitialFileList() {
         ftpClient.getCurDirFileList(object : MyFTPCallback<List<MyFtpFile>> {
@@ -72,6 +87,7 @@ class ClientViewModel : ViewModel() {
             }
         })
     }
+
     fun connectToFtpServer() {
         ftpClient.connect(
             address.value,
@@ -81,7 +97,7 @@ class ClientViewModel : ViewModel() {
             object : MyFTPCallback<Void> {
                 override fun onSuccess(response: Void?) {
                     fetchInitialFileList()
-                    _ftpServerStarted.value = true
+                    _ftpClientConnect.value = true
                 }
 
                 override fun onFail(code: Int, msg: String) {
@@ -111,10 +127,10 @@ class ClientViewModel : ViewModel() {
         })
     }
 
-    fun uploadFile() {
+    fun uploadFile(pathToFile: String) {
         try {
             ftpClient.uploadFile(
-                file.absolutePath,
+                pathToFile,
                 object : MyFTPSpeedCallback() {
                     override fun onTransferSpeed(
                         isFinished: Boolean,
