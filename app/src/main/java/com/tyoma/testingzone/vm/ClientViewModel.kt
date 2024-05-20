@@ -65,16 +65,14 @@ class ClientViewModel : ViewModel() {
     fun updateClientStatus(newStatus: Boolean) {
         _ftpClientConnect.value = newStatus
     }
+
     fun updateShowDialog(newStatus: Boolean) {
         _showDialog.value = newStatus
     }
+
     fun updateShowList(newStatus: Boolean) {
         _showList.value = newStatus
     }
-
-//    fun setFileUri(uri: Uri?) {
-//        _fileUri.value = uri
-//    }
 
     private fun fetchInitialFileList() {
         ftpClient.getCurDirFileList(object : MyFTPCallback<List<MyFtpFile>> {
@@ -89,8 +87,7 @@ class ClientViewModel : ViewModel() {
     }
 
     fun connectToFtpServer() {
-        ftpClient.connect(
-            address.value,
+        ftpClient.connect(address.value,
             port.value.toIntOrNull() ?: 0,
             user.value,
             password.value,
@@ -103,8 +100,7 @@ class ClientViewModel : ViewModel() {
                 override fun onFail(code: Int, msg: String) {
                     // Handle connection failure
                 }
-            }
-        )
+            })
     }
 
     fun changeDirectory(newDirectory: String) {
@@ -129,24 +125,21 @@ class ClientViewModel : ViewModel() {
 
     fun uploadFile(pathToFile: String) {
         try {
-            ftpClient.uploadFile(
-                pathToFile,
-                object : MyFTPSpeedCallback() {
-                    override fun onTransferSpeed(
-                        isFinished: Boolean,
-                        startTime: Long,
-                        endTime: Long,
-                        speed: Double,
-                        averageSpeed: Double
-                    ) {
-                        if (isFinished) {
+            ftpClient.uploadFile(pathToFile, object : MyFTPSpeedCallback() {
+                override fun onTransferSpeed(
+                    isFinished: Boolean,
+                    startTime: Long,
+                    endTime: Long,
+                    speed: Double,
+                    averageSpeed: Double
+                ) {
+                    if (isFinished) {
 
-                            Log.d("TG", "TRANSMISSION DONE")
-                        }
-                        // Handle transfer speed updates if needed
+                        Log.d("TG", "TRANSMISSION DONE")
                     }
+                    // Handle transfer speed updates if needed
                 }
-            )
+            })
         } catch (msg: FTPException) {
             Log.e("FFFF", msg.toString())
         }
@@ -155,30 +148,27 @@ class ClientViewModel : ViewModel() {
 
     fun downloadFile(file: MyFtpFile) {
         val saveLocalPath: String = SAVE_FILE_PATH + "/" + file.name
-        ftpClient.downloadFile(
-            file,
-            saveLocalPath,
-            object : MyFTPSpeedCallback() {
-                override fun onTransferSpeed(
-                    isFinished: Boolean,
-                    startTime: Long,
-                    endTime: Long,
-                    speed: Double,
-                    averageSpeed: Double
-                ) {
-                }
+        ftpClient.downloadFile(file, saveLocalPath, object : MyFTPSpeedCallback() {
+            override fun onTransferSpeed(
+                isFinished: Boolean,
+                startTime: Long,
+                endTime: Long,
+                speed: Double,
+                averageSpeed: Double
+            ) {
+            }
 
-                override fun onStateChanged(state: Int) {
-                    super.onStateChanged(state)
-                }
+            override fun onStateChanged(state: Int) {
+                super.onStateChanged(state)
+            }
 
-                override fun onTransferDone(fileSize: Long, resultSize: Int) {
-                    super.onTransferDone(fileSize, resultSize)
-                }
+            override fun onTransferDone(fileSize: Long, resultSize: Int) {
+                super.onTransferDone(fileSize, resultSize)
+            }
 
-                override fun onErr(code: Int, msg: String) {
-                    super.onErr(code, msg)
-                }
-            })
+            override fun onErr(code: Int, msg: String) {
+                super.onErr(code, msg)
+            }
+        })
     }
 }

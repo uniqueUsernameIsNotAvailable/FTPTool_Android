@@ -15,8 +15,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -29,11 +27,6 @@ import com.tyoma.testingzone.vm.ServerViewModel
 fun ServerScreen(
     vModel: ServerViewModel = viewModel()
 ) {
-    val user = rememberSaveable { mutableStateOf(vModel.user.value) }
-    val password = rememberSaveable { mutableStateOf(vModel.password.value) }
-    val address = rememberSaveable { mutableStateOf(vModel.address.value) }
-    val port = rememberSaveable { mutableStateOf(vModel.port.value) }
-
     val context = LocalContext.current
 
     Column(
@@ -44,50 +37,29 @@ fun ServerScreen(
         Greeting("Server mode", Modifier.offset(0.dp, (-128).dp))
 
         DescriptionText(
-            "Enter server parameters in the fields below:",
-            Modifier.offset(0.dp, (-64).dp)
+            "Enter server parameters in the fields below:", Modifier.offset(0.dp, (-64).dp)
         )
 
-        TextField(
-            value = user.value,
-            onValueChange = {
-                user.value = it
-                vModel.onUserChanged(it)
-            },
-            label = { Text("User") },
-            modifier = Modifier.padding(8.dp)
+        TextField(value = vModel.user.value, onValueChange = {
+            vModel.onUserChanged(it)
+        }, label = { Text("User") }, modifier = Modifier.padding(8.dp)
         )
-        TextField(
-            value = password.value,
-            onValueChange = {
-                password.value = it
-                vModel.onPasswordChanged(it)
-            },
-            label = { Text("Password") },
-            modifier = Modifier.padding(8.dp)
+        TextField(value = vModel.password.value, onValueChange = {
+            vModel.onPasswordChanged(it)
+        }, label = { Text("Password") }, modifier = Modifier.padding(8.dp)
         )
-        TextField(
-            value = address.value,
-            onValueChange = {
-                address.value = it
-                vModel.onAddressChanged(it)
-            },
-            label = { Text("Path") },
-            modifier = Modifier.padding(8.dp)
+        TextField(value = vModel.address.value, onValueChange = {
+            vModel.onAddressChanged(it)
+        }, label = { Text("Path") }, modifier = Modifier.padding(8.dp)
         )
-        TextField(
-            value = port.value,
-            onValueChange = {
-                port.value = it
-                vModel.onPortChanged(it)
-            },
-            label = { Text("Port") },
-            modifier = Modifier.padding(8.dp)
+        TextField(value = vModel.port.value, onValueChange = {
+            vModel.onPortChanged(it)
+        }, label = { Text("Port") }, modifier = Modifier.padding(8.dp)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        val ip: String = getLocalIpAddress()!!;
+        val ip: String = getLocalIpAddress()!!
         Text(text = "Server will be hosted on: $ip")
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -97,7 +69,7 @@ fun ServerScreen(
         }
 
         Row {
-            Button(onClick = vModel::startFtpServer){
+            Button(onClick = vModel::startFtpServer) {
                 Text(text = "Start FTP Server")
             }
 

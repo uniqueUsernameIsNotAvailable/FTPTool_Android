@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tyoma.testingzone.R
-import com.tyoma.testingzone.libs.main.MyFtpFile.Companion.TYPE_DIRECTORY
+import com.tyoma.testingzone.libs.main.MyFtpFile.CREATOR.TYPE_DIRECTORY
 import com.tyoma.testingzone.model.FileUploadButton
 import com.tyoma.testingzone.model.getRealPathFromURI
 import com.tyoma.testingzone.utils.itemInfoBuilder
@@ -153,10 +153,8 @@ fun FileList(vModel: ClientViewModel) {
                         }
                         Text(text = itemInfoBuilder(file))
 
-                        Button(
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                            onClick = { vModel.downloadFile(file) }
-                        ) {
+                        Button(modifier = Modifier.align(Alignment.CenterVertically),
+                            onClick = { vModel.downloadFile(file) }) {
                             Text(
                                 text = "Get"
                             )
@@ -178,26 +176,22 @@ fun ConnectionDialog(vModel: ClientViewModel) {
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            OutlinedTextField(
-                vModel.user.value,
+            OutlinedTextField(vModel.user.value,
                 onValueChange = { vModel.updateUser(it) },
                 label = { Text("User") },
                 modifier = Modifier.padding(8.dp)
             )
-            OutlinedTextField(
-                vModel.password.value,
+            OutlinedTextField(vModel.password.value,
                 onValueChange = { vModel.updatePassword(it) },
                 label = { Text("Password") },
                 modifier = Modifier.padding(8.dp)
             )
-            OutlinedTextField(
-                vModel.address.value,
+            OutlinedTextField(vModel.address.value,
                 onValueChange = { vModel.updateAddress(it) },
                 label = { Text("Path") },
                 modifier = Modifier.padding(8.dp)
             )
-            OutlinedTextField(
-                vModel.port.value,
+            OutlinedTextField(vModel.port.value,
                 onValueChange = { vModel.updatePort(it) },
                 label = { Text("Port") },
                 modifier = Modifier.padding(8.dp)

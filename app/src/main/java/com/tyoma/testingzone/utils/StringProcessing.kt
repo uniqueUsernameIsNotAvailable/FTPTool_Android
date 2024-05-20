@@ -44,7 +44,7 @@ fun itemInfoBuilder(file: MyFtpFile): String {
                 0..kotlin.math.min(
                     fNameLen - 1, 12
                 )
-            ) + if (fNameLen > 12) "..." else " "
+            ) + if (fNameLen > 16) "..." else " "
         )
         append("Type: " + if (fType == 1) "Folder " else "File ")
         if (fType == 0) {
